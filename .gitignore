@@ -1,0 +1,11 @@
+Debug/
+Release/
+bin/
+build/
+.vs/
+.vscode/
+*.user
+xiloader.exe
+xiloader.pdb
+*.ilk
+*.exe.manifest
