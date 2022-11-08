@@ -22,6 +22,7 @@ This file is part of DarkStar-server source code.
 */
 
 #include "network.h"
+#include "macaddress.cpp"
 
 /* Externals */
 extern std::string g_ServerAddress;
@@ -318,9 +319,10 @@ namespace xiloader
         /* Copy username and password into buffer.. */
         memcpy(sendBuffer + 0x00, g_Username.c_str(), 16);
         memcpy(sendBuffer + 0x10, g_Password.c_str(), 16);
+        memcpy(sendBuffer + 0x21, gMAC().c_str(), 16);
 
         /* Send info to server and obtain response.. */
-        send(sock->s, sendBuffer, 33, 0);
+        send(sock->s, sendBuffer, 50, 0);
         recv(sock->s, recvBuffer, 16, 0);
 
         /* Handle the obtained result.. */

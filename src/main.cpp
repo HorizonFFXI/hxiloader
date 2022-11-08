@@ -301,12 +301,13 @@ int __cdecl main(int argc, char* argv[])
     /* Output the banner.. */
     time_t currentTime = time(NULL);
     int currentYear = localtime(&currentTime)->tm_year + 1900;  // Year is returned as the number of years since 1900.
-    xiloader::console::output(xiloader::color::lightred, "==========================================================");
-    xiloader::console::output(xiloader::color::lightgreen, "DarkStar Boot Loader (c) 2015 DarkStar Team");
+    xiloader::console::output(xiloader::color::lightred, "====================================================================");
+    xiloader::console::output(xiloader::color::lightgreen, "DarkStar Boot Loader     (c) 2015    DarkStar Team");
     xiloader::console::output(xiloader::color::lightgreen, "LandSandBoat Boot Loader (c) 2021-%d LandSandBoat Team", currentYear);
-    xiloader::console::output(xiloader::color::lightpurple, "Git Repo   : https://github.com/LandSandBoat/xiloader");
-    xiloader::console::output(xiloader::color::lightpurple, "Bug Reports: https://github.com/LandSandBoat/xiloader/issues");
-    xiloader::console::output(xiloader::color::lightred, "==========================================================");
+    xiloader::console::output(xiloader::color::lightgreen, "HorizonXI Boot Loader    (c) 2022-%d HorizonXI Team", currentYear);
+    xiloader::console::output(xiloader::color::lightpurple, "Based on Git Repo : https://github.com/LandSandBoat/xiloader");
+    xiloader::console::output(xiloader::color::lightpurple, "Bug Reports       : https://github.com/HorizonFFXI/HorizonXI-Issues");
+    xiloader::console::output(xiloader::color::lightred, "====================================================================");
 
     /* Initialize Winsock */
     WSADATA wsaData = { 0 };
