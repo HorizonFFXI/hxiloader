@@ -14,7 +14,6 @@ std::string gMAC()
     AdapterInfo = (IP_ADAPTER_INFO *) malloc(sizeof(IP_ADAPTER_INFO));
     if (AdapterInfo == NULL)
     {
-        printf("Error allocating memory needed to call GetAdaptersinfo\n");
         free(mac_addr);
         return NULL; // it is safe to call free(NULL)
     }
@@ -25,7 +24,6 @@ std::string gMAC()
         AdapterInfo = (IP_ADAPTER_INFO *) malloc(dwBufLen);
         if (AdapterInfo == NULL)
         {
-            printf("Error allocating memory needed to call GetAdaptersinfo\n");
             free(mac_addr);
             return NULL;
         }
@@ -41,10 +39,6 @@ std::string gMAC()
         pAdapterInfo->Address[0], pAdapterInfo->Address[1],
         pAdapterInfo->Address[2], pAdapterInfo->Address[3],
         pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-        printf("Address: %s, mac: %s\n", pAdapterInfo->IpAddressList.IpAddress.String, mac_addr);
-        // print them all, return the last one.
-        // return mac_addr;
-        printf("\n");
     }
 
     free(AdapterInfo);
