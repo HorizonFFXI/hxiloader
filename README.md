@@ -1,21 +1,9 @@
-# xiloader
+# hxiloader
+FFXI Server Emulator Boot Loader
+Based on the updated LSB bootloader.
 
-FFXI Server Emulator Boot Loader -- Launches client without PlayOnline.
+This bootloader does log mac addresses in order to improve server security and track cheaters.
 
-## Build
+This bootloader does comply with GDPR as per Art. 4 mac addresses are only machine identifiers rather than personally identifiable information (PII).
 
-```sh
-mkdir build
-cmake -S . -B build -A Win32
-cmake --build build
-```
-
-## xi_checker
-
-Verifies DirectPlay and POL are installed and connect to a server using xiloader (installed in POL folder).
-
-Usage:
-
-```sh
-xi_checker $server_ip
-```
+This link explains the implications of GDPR and its application to this bootloader: https://gdpr-info.eu/art-4-gdpr/#:~:text=%E2%80%98pseudonymisation%E2%80%99%20means%20the,identifiable%20natural%20person%3B

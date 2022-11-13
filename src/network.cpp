@@ -22,7 +22,6 @@ This file is part of DarkStar-server source code.
 */
 
 #include "network.h"
-#include "macaddress.cpp"
 
 /* Externals */
 extern std::string g_ServerAddress;
@@ -208,6 +207,58 @@ namespace xiloader
         return true;
     }
 
+    std::string getMACAddress()
+    {
+        // Allocate space for at least one adapter..
+        auto info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
+        ULONG size = 0;
+
+        // Obtain the adapter info, if fails, resize the buffer..
+        if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
+        {
+            delete[] info;
+            info = (IP_ADAPTER_INFO*)new uint8_t[size];
+        }
+
+        // Reobtain the adapter info..
+        if (::GetAdaptersInfo(info, &size) != ERROR_SUCCESS)
+        {
+            delete[] info;
+            return "";
+        }
+
+        // Walk the adapters..
+        std::string adapterAddress;
+        auto adapter = info;
+        while (adapter)
+        {
+            // Build the adapter address..
+            for (size_t x = 0; x < adapter->AddressLength; x++)
+            {
+                // Build the address from the adapter info..
+                char buffer[256] = { 0 };
+                std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
+                adapterAddress += buffer;
+
+                // Append colons between address parts..
+                if (x < adapter->AddressLength - 1)
+                    adapterAddress += ":";
+            }
+
+            // Ensure this adapter found a valid address..
+            if (adapterAddress.length() > 0)
+                break;
+
+            // Step to the next adapter..
+            adapter = adapter->Next;
+        }
+
+        // Cleanup and return..
+        delete[] info;
+
+        return adapterAddress;
+    }
+
     /**
      * @brief Verifies the players login information; also handles creating new accounts.
      *
@@ -242,7 +293,7 @@ namespace xiloader
             std::string input;
 
             /* User wants to log into an existing account or modify an existing account's password. */
-            std::cout << "\n Username: ";
+            std::cout << "\nUsername: ";
             std::cin >> g_Username;
             std::cout << "Password: ";
             g_Password.clear();
@@ -282,7 +333,7 @@ namespace xiloader
         /* Copy username and password into buffer.. */
         memcpy(sendBuffer + 0x00, g_Username.c_str(), 16);
         memcpy(sendBuffer + 0x10, g_Password.c_str(), 16);
-        memcpy(sendBuffer + 0x21, gMAC().c_str(), 16);
+        memcpy(sendBuffer + 0x21, getMACAddress().c_str(), 16);
 
         /* Send info to server and obtain response.. */
         send(sock->s, sendBuffer, 50, 0);

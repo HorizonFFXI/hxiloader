@@ -33,6 +33,9 @@ This file is part of DarkStar-server source code.
 #include <windows.h>
 #include <string>
 #include <conio.h>
+#include <iphlpapi.h>
+
+#pragma comment(lib, "IPHLPAPI.lib")
 
 #include "console.h"
 
