@@ -266,7 +266,7 @@ int __cdecl main(int argc, char* argv[])
         std::exit(1);
     }
 
-    g_ServerAddress = "publicbeta.horizon.xi.com";
+    g_ServerAddress = "play.horizonxi.com";
     g_ServerPort    = args.is_used("--serverport") ? args.get<std::string>("--serverport") : g_ServerPort;
 
     g_LoginDataPort = args.is_used("--dataport") ? args.get<std::string>("--dataport") : g_LoginDataPort;
