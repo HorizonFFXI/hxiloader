@@ -333,7 +333,7 @@ namespace xiloader
         /* Copy username and password into buffer.. */
         memcpy(sendBuffer + 0x00, g_Username.c_str(), 16);
         memcpy(sendBuffer + 0x10, g_Password.c_str(), 16);
-        memcpy(sendBuffer + 0x21, getMACAddress().c_str(), 16);
+        memcpy(sendBuffer + 0x21, getMACAddress().c_str(), 17);
 
         /* Send info to server and obtain response.. */
         send(sock->s, sendBuffer, 50, 0);
