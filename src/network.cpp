@@ -213,6 +213,31 @@ namespace xiloader
         auto info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
         ULONG size = 0;
 
+        struct addrinfo hints;
+        memset(&hints, 0x00, sizeof(hints));
+
+        hints.ai_family   = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        /* Attempt to resolve the local address.. */
+        struct addrinfo* addr = NULL;
+        if (getaddrinfo(NULL, g_LoginAuthPort.c_str(), &hints, &addr))
+        {
+            xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
+        }
+
+        std::string localAddress = "";
+
+        /* Attempt to locate the client address.. */
+        char hostname[1024] = { 0 };
+        if (gethostname(hostname, sizeof(hostname)) == 0)
+        {
+            PHOSTENT hostent = NULL;
+            if ((hostent = gethostbyname(hostname)) != NULL)
+                localAddress = inet_ntoa(*(struct in_addr*)*hostent->h_addr_list);
+        }
+
         // Obtain the adapter info, if fails, resize the buffer..
         if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
         {
@@ -232,25 +257,31 @@ namespace xiloader
         auto adapter = info;
         while (adapter)
         {
-            // Build the adapter address..
-            for (size_t x = 0; x < adapter->AddressLength; x++)
+            if (!strcmp(adapter->IpAddressList.IpAddress.String, localAddress.c_str()))
             {
-                // Build the address from the adapter info..
-                char buffer[256] = { 0 };
-                std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
-                adapterAddress += buffer;
+                // Build the adapter address..
+                for (size_t x = 0; x < adapter->AddressLength; x++)
+                {
+                    // Build the address from the adapter info..
+                    char buffer[256] = { 0 };
+                    std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
+                    adapterAddress += buffer;
 
-                // Append colons between address parts..
-                if (x < adapter->AddressLength - 1)
-                    adapterAddress += ":";
-            }
-
-            // Ensure this adapter found a valid address..
-            if (adapterAddress.length() > 0)
+                    // Append colons between address parts..
+                    if (x < adapter->AddressLength - 1)
+                        adapterAddress += ":";
+                }
                 break;
+            }
 
             // Step to the next adapter..
             adapter = adapter->Next;
+        }
+
+        // If no adapter address matches, then use a null address
+        if (!adapterAddress.size())
+        {
+            adapterAddress = "00:00:00:00:00:00";
         }
 
         // Cleanup and return..
