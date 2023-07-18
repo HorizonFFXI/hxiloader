@@ -316,41 +316,78 @@ namespace xiloader
         if (bUseAutoLogin)
             xiloader::console::output(xiloader::color::lightgreen, "Autologin activated!");
 
-        if (!bUseAutoLogin)
+         if (!bUseAutoLogin)
         {
-            xiloader::console::output("====================================");
-            xiloader::console::output("Please enter your login information.");
-            xiloader::console::output("====================================");
+            xiloader::console::output("==========================================================");
+            xiloader::console::output("What would you like to do?");
+            xiloader::console::output("   1.) Login");
+            xiloader::console::output("   2.) Create New Account");
+            xiloader::console::output("   3.) Change Account Password");
+            xiloader::console::output("==========================================================");
+            printf("\nEnter a selection: ");
+
             std::string input;
+            std::cin >> input;
+            std::cout << std::endl;
 
             /* User wants to log into an existing account or modify an existing account's password. */
-            std::cout << "\nUsername: ";
-            std::cin >> g_Username;
-            std::cout << "Password: ";
-            g_Password.clear();
-
-            /* Read in each char and instead of displaying it. display a "*" */
-            char ch;
-            while ((ch = static_cast<char>(_getch())) != '\r')
+            if (input == "1" || input == "3")
             {
-                if (ch == '\0')
-                    continue;
-                else if (ch == '\b')
+                if (input == "3")
+                    xiloader::console::output("Before resetting your password, first verify your account details.");
+                xiloader::console::output("Please enter your login information.");
+                std::cout << "\nUsername: ";
+                std::cin >> g_Username;
+                std::cout << "Password: ";
+                g_Password.clear();
+
+                /* Read in each char and instead of displaying it. display a "*" */
+                char ch;
+                while ((ch = static_cast<char>(_getch())) != '\r')
                 {
-                    if (g_Password.size())
+                    if (ch == '\0')
+                        continue;
+                    else if (ch == '\b')
                     {
-                        g_Password.pop_back();
-                        std::cout << "\b \b";
+                        if (g_Password.size())
+                        {
+                            g_Password.pop_back();
+                            std::cout << "\b \b";
+                        }
+                    }
+                    else
+                    {
+                        g_Password.push_back(ch);
+                        std::cout << '*';
                     }
                 }
-                else
-                {
-                    g_Password.push_back(ch);
-                    std::cout << '*';
-                }
+                std::cout << std::endl;
+
+                char event_code = (input == "1") ? 0x10 : 0x30;
+                sendBuffer[0x20] = event_code;
             }
-            std::cout << std::endl;
-            sendBuffer[0x20] = 0x10;
+            /* User wants to create a new account.. */
+            else if (input == "2")
+            {
+            create_account:
+                xiloader::console::output("Please enter your desired login information.");
+                std::cout << "\nUsername (3-15 characters): ";
+                std::cin >> g_Username;
+                std::cout << "Password (6-15 characters): ";
+                g_Password.clear();
+                std::cin >> g_Password;
+                std::cout << "Repeat Password           : ";
+                std::cin >> input;
+                std::cout << std::endl;
+
+                if (input != g_Password)
+                {
+                    xiloader::console::output(xiloader::color::error, "Passwords did not match! Please try again.");
+                    goto create_account;
+                }
+
+                sendBuffer[0x20] = 0x20;
+            }
 
             std::cout << std::endl;
         }
