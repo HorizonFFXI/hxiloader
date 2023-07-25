@@ -6,10 +6,10 @@ on:
       - "v*.*.*"
 
 jobs:
-  Windows_2019_32bit:
-    runs-on: windows-2019
+  Windows_2022_32bit:
+    runs-on: windows-2022
     env:
-      MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
+      MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
     steps:
       - uses: actions/checkout@v1
         with:
@@ -22,7 +22,8 @@ jobs:
       - name: Build
         shell: cmd
         run: |
-          cmake --build build
+          # https://stackoverflow.com/a/19026241
+          cmake --build build --config Release
       - name: Get Exe Hash
         id: hashes
         shell: pwsh
