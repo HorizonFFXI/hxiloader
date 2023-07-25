@@ -58,6 +58,94 @@ namespace sslState
 
 namespace xiloader
 {
+
+    /**
+     * @brief Finds the MAC address of the primary network adapter
+     * @return MAC address buffer
+     */
+    std::string GetMacAddress()
+    {
+        // Allocate space for at least one adapter..
+        auto info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
+        ULONG size = 0;
+
+        struct addrinfo hints;
+        memset(&hints, 0x00, sizeof(hints));
+
+        hints.ai_family   = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        /* Attempt to resolve the local address.. */
+        struct addrinfo* addr = NULL;
+        if (getaddrinfo(NULL, globals::g_LoginAuthPort.c_str(), &hints, &addr))
+        {
+            xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
+        }
+
+        std::string localAddress = "";
+
+        /* Attempt to locate the client address.. */
+        char hostname[1024] = { 0 };
+        if (gethostname(hostname, sizeof(hostname)) == 0)
+        {
+            PHOSTENT hostent = NULL;
+            if ((hostent = gethostbyname(hostname)) != NULL)
+                localAddress = inet_ntoa(*(struct in_addr*)*hostent->h_addr_list);
+        }
+
+        // Obtain the adapter info, if fails, resize the buffer..
+        if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
+        {
+            delete[] info;
+            info = (IP_ADAPTER_INFO*)new uint8_t[size];
+        }
+
+        // Reobtain the adapter info..
+        if (::GetAdaptersInfo(info, &size) != ERROR_SUCCESS)
+        {
+            delete[] info;
+            return "";
+        }
+
+        // Walk the adapters..
+        std::string adapterAddress;
+        auto adapter = info;
+        while (adapter)
+        {
+            if (!strcmp(adapter->IpAddressList.IpAddress.String, localAddress.c_str()))
+            {
+                // Build the adapter address..
+                for (size_t x = 0; x < adapter->AddressLength; x++)
+                {
+                    // Build the address from the adapter info..
+                    char buffer[256] = { 0 };
+                    std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
+                    adapterAddress += buffer;
+
+                    // Append colons between address parts..
+                    if (x < adapter->AddressLength - 1)
+                        adapterAddress += ":";
+                }
+                break;
+            }
+
+            // Step to the next adapter..
+            adapter = adapter->Next;
+        }
+
+        // If no adapter address matches, then use a null address
+        if (!adapterAddress.size())
+        {
+            adapterAddress = "00:00:00:00:00:00";
+        }
+
+        // Cleanup and return..
+        delete[] info;
+
+        return adapterAddress;
+    }
+
     /**
      * @brief Creates a connection on the given port.
      *
@@ -317,89 +405,6 @@ namespace xiloader
         return true;
     }
 
-    std::string getMACAddress()
-    {
-        // Allocate space for at least one adapter..
-        auto info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
-        ULONG size = 0;
-
-        struct addrinfo hints;
-        memset(&hints, 0x00, sizeof(hints));
-
-        hints.ai_family   = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-
-        /* Attempt to resolve the local address.. */
-        struct addrinfo* addr = NULL;
-        if (getaddrinfo(NULL, g_LoginAuthPort.c_str(), &hints, &addr))
-        {
-            xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
-        }
-
-        std::string localAddress = "";
-
-        /* Attempt to locate the client address.. */
-        char hostname[1024] = { 0 };
-        if (gethostname(hostname, sizeof(hostname)) == 0)
-        {
-            PHOSTENT hostent = NULL;
-            if ((hostent = gethostbyname(hostname)) != NULL)
-                localAddress = inet_ntoa(*(struct in_addr*)*hostent->h_addr_list);
-        }
-
-        // Obtain the adapter info, if fails, resize the buffer..
-        if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
-        {
-            delete[] info;
-            info = (IP_ADAPTER_INFO*)new uint8_t[size];
-        }
-
-        // Reobtain the adapter info..
-        if (::GetAdaptersInfo(info, &size) != ERROR_SUCCESS)
-        {
-            delete[] info;
-            return "";
-        }
-
-        // Walk the adapters..
-        std::string adapterAddress;
-        auto adapter = info;
-        while (adapter)
-        {
-            if (!strcmp(adapter->IpAddressList.IpAddress.String, localAddress.c_str()))
-            {
-                // Build the adapter address..
-                for (size_t x = 0; x < adapter->AddressLength; x++)
-                {
-                    // Build the address from the adapter info..
-                    char buffer[256] = { 0 };
-                    std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
-                    adapterAddress += buffer;
-
-                    // Append colons between address parts..
-                    if (x < adapter->AddressLength - 1)
-                        adapterAddress += ":";
-                }
-                break;
-            }
-
-            // Step to the next adapter..
-            adapter = adapter->Next;
-        }
-
-        // If no adapter address matches, then use a null address
-        if (!adapterAddress.size())
-        {
-            adapterAddress = "00:00:00:00:00:00";
-        }
-
-        // Cleanup and return..
-        delete[] info;
-
-        return adapterAddress;
-    }
-
     /**
      * @brief Verifies the players login information; also handles creating new accounts.
      *
@@ -431,10 +436,17 @@ namespace xiloader
         // TODO: kill all labels and gotos
         if (!bUseAutoLogin)
         {
-            xiloader::console::output("====================================");
-            xiloader::console::output("Please enter your login information.");
-            xiloader::console::output("====================================");
+            xiloader::console::output("==========================================================");
+            xiloader::console::output("What would you like to do?");
+            xiloader::console::output("   1.) Login");
+            xiloader::console::output("   2.) Create New Account");
+            xiloader::console::output("   3.) Change Account Password");
+            xiloader::console::output("==========================================================");
+            printf("\nEnter a selection: ");
+
             std::string input;
+            std::cin >> input;
+            std::cout << std::endl;
 
             /* User wants to log into an existing account or modify an existing account's password. */
             if (input == "1" || input == "3")
@@ -447,15 +459,13 @@ namespace xiloader
                 std::cout << "Password: ";
                 globals::g_Password.clear();
 
-            /* Read in each char and instead of displaying it. display a "*" */
-            char ch;
-            while ((ch = static_cast<char>(_getch())) != '\r')
-            {
-                if (ch == '\0')
-                    continue;
-                else if (ch == '\b')
+                /* Read in each char and instead of displaying it. display a "*" */
+                char ch;
+                while ((ch = static_cast<char>(_getch())) != '\r')
                 {
-                    if (g_Password.size())
+                    if (ch == '\0')
+                        continue;
+                    else if (ch == '\b')
                     {
                         if (globals::g_Password.size())
                         {
@@ -513,14 +523,12 @@ namespace xiloader
 
                 if (input != globals::g_Password)
                 {
-                    g_Password.push_back(ch);
-                    std::cout << '*';
+                    xiloader::console::output(xiloader::color::error, "Passwords did not match! Please try again.");
+                    goto create_account;
                 }
 
                 sendBuffer[0x39] = 0x20;
             }
-            std::cout << std::endl;
-            sendBuffer[0x20] = 0x10;
 
             std::cout << std::endl;
         }
@@ -550,7 +558,7 @@ namespace xiloader
         memcpy(sendBuffer + 0x40, new_password.c_str(), 32);
 
         // 17 byte wide operator specific space starting at 0x50 // This region will be used for anything server operators may install into custom launchers.
-        memcpy(sesndBuffer + 0x50, getMACAddress().c_str(), 17);
+        memcpy(sendBuffer + 0x50, GetMacAddress().c_str(), 17);
 
         /* Copy version number into buffer */
         memcpy(sendBuffer + 0x61, globals::g_VersionNumber.c_str(), 5);
