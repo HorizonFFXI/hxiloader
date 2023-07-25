@@ -550,6 +550,7 @@ namespace xiloader
         memcpy(sendBuffer + 0x40, new_password.c_str(), 32);
 
         // 17 byte wide operator specific space starting at 0x50 // This region will be used for anything server operators may install into custom launchers.
+        memcpy(sesndBuffer + 0x50, getMACAddress().c_str(), 17);
 
         /* Copy version number into buffer */
         memcpy(sendBuffer + 0x61, globals::g_VersionNumber.c_str(), 5);
