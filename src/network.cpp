@@ -35,12 +35,13 @@ namespace globals
     extern char        g_SessionHash[16];
     extern std::string g_Email;
     extern std::string g_VersionNumber;
-    extern std::string g_ServerPort;
-    extern std::string g_LoginDataPort;
-    extern std::string g_LoginViewPort;
-    extern std::string g_LoginAuthPort;
+    extern uint16_t    g_ServerPort;
+    extern uint16_t    g_LoginDataPort;
+    extern uint16_t    g_LoginViewPort;
+    extern uint16_t    g_LoginAuthPort;
     extern char*       g_CharacterList;
     extern bool        g_IsRunning;
+    extern bool        g_FirstLogin;
 }
 
 // mbed tls state
@@ -78,7 +79,9 @@ namespace xiloader
 
         /* Attempt to resolve the local address.. */
         struct addrinfo* addr = NULL;
-        if (getaddrinfo(NULL, globals::g_LoginAuthPort.c_str(), &hints, &addr))
+        std::string      port = std::to_string(globals::g_LoginDataPort); // also known as servicename in getaddrinfo
+
+        if (getaddrinfo(NULL, port.c_str(), &hints, &addr))
         {
             xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
         }
@@ -240,15 +243,20 @@ namespace xiloader
             return 0;
         }
 
-        if ((mbedtls_net_connect(&sslState::server_fd, globals::g_ServerAddress.c_str(), port, MBEDTLS_NET_PROTO_TCP)) != 0)
+        int ret = 0;
+
+        ret = mbedtls_net_connect(&sslState::server_fd, globals::g_ServerAddress.c_str(), port, MBEDTLS_NET_PROTO_TCP);
+        if (ret != 0)
         {
-            xiloader::console::output(xiloader::color::error, "mbedtls_net_connect failed.");
+            xiloader::console::output(xiloader::color::error, "mbedtls_net_connect failed, (%s)", mbedtls_low_level_strerr(ret));
             return 0;
         }
 
-        if (mbedtls_ssl_config_defaults(&sslState::conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT) != 0)
+        ret = mbedtls_ssl_config_defaults(&sslState::conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
+        if (ret != 0)
         {
-            xiloader::console::output(xiloader::color::error, "mbedtls_ssl_config_defaults failed.");
+            xiloader::console::output(xiloader::color::error, "mbedtls_ssl_config_defaults failed, (%s)", mbedtls_low_level_strerr(ret));
+            ;
             return 0;
         }
 
@@ -257,11 +265,9 @@ namespace xiloader
         mbedtls_ssl_conf_ca_chain(&sslState::conf, sslState::ca_chain.get(), NULL);
         mbedtls_ssl_conf_rng(&sslState::conf, mbedtls_ctr_drbg_random, &sslState::ctr_drbg);
 
-        int ret = 0;
-
         if ((ret = mbedtls_ssl_setup(&sslState::ssl, &sslState::conf)) != 0)
         {
-            xiloader::console::output(xiloader::color::error, "mbedtls_ssl_setup returned %d", ret);
+            xiloader::console::output(xiloader::color::error, "mbedtls_ssl_setup failed, (%s)", mbedtls_low_level_strerr(ret));
             return 0;
         }
 
@@ -280,12 +286,20 @@ namespace xiloader
 
         if ((flags = mbedtls_ssl_get_verify_result(&sslState::ssl)) != 0)
         {
-            char vrfy_buf[512];
+            // We genuinely don't care if the error flags is ONLY that the cert isn't trusted,
+            // If this is the only warning, just don't print it.
+            if (flags != MBEDTLS_X509_BADCERT_NOT_TRUSTED)
+            {
+                char        vrfy_buf[1024] = {};
+                std::string timestamp      = xiloader::console::getTimestamp();
 
-            mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", flags);
+                flags &= ~MBEDTLS_X509_BADCERT_NOT_TRUSTED; // Don't report the cert isn't trusted -- we don't care.
 
-            xiloader::console::output(xiloader::color::warning, "Remote server certificate warnings:", vrfy_buf);
-            xiloader::console::output(xiloader::color::warning, "%s", vrfy_buf);
+                mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), timestamp.c_str(), flags);
+
+                xiloader::console::output(xiloader::color::warning, "Remote server certificate warnings:", vrfy_buf);
+                xiloader::console::print(xiloader::color::warning, vrfy_buf);
+            }
         }
         else
         {
@@ -414,8 +428,6 @@ namespace xiloader
      */
     bool network::VerifyAccount(datasocket* sock)
     {
-        static bool bFirstLogin = true;
-
         unsigned char recvBuffer[1024] = { 0 };
         unsigned char sendBuffer[1024] = { 0 };
         std::string new_password       = "";
@@ -429,7 +441,7 @@ namespace xiloader
         }*/
 
         /* Determine if we should auto-login.. */
-        bool bUseAutoLogin = !globals::g_Username.empty() && !globals::g_Password.empty() && bFirstLogin;
+        bool bUseAutoLogin = !globals::g_Username.empty() && !globals::g_Password.empty() && globals::g_FirstLogin;
         if (bUseAutoLogin)
             xiloader::console::output(xiloader::color::lightgreen, "Autologin activated!");
 
@@ -535,8 +547,8 @@ namespace xiloader
         else
         {
             /* User has auto-login enabled.. */
-            sendBuffer[0x39] = 0x10;
-            bFirstLogin = false;
+            sendBuffer[0x39]      = 0x10;
+            globals::g_FirstLogin = false;
         }
 
         sendBuffer[0] = 0xFF; // Magic for new xiloader bits
@@ -836,8 +848,10 @@ namespace xiloader
      */
     DWORD __stdcall network::FFXiServer(LPVOID lpParam)
     {
+        std::string port = std::to_string(globals::g_LoginDataPort); // also known as service in getaddrinfo
+
         /* Attempt to create connection to the server.. */
-        if (!xiloader::network::CreateConnection((xiloader::datasocket*)lpParam, globals::g_LoginDataPort.c_str()))
+        if (!xiloader::network::CreateConnection((xiloader::datasocket*)lpParam, port.c_str()))
             return 1;
 
         /* Attempt to start data communication with the server.. */
@@ -858,10 +872,12 @@ namespace xiloader
     {
         UNREFERENCED_PARAMETER(lpParam);
 
-        SOCKET sock, client;
+        SOCKET      sock;
+        SOCKET      client;
+        std::string port = std::to_string(globals::g_ServerPort); // also known as servicename in getaddrinfo
 
         /* Attempt to create listening server.. */
-        if (!xiloader::network::CreateListenServer(&sock, IPPROTO_TCP, globals::g_ServerPort.c_str()))
+        if (!xiloader::network::CreateListenServer(&sock, IPPROTO_TCP, port.c_str()))
             return 1;
 
         while (globals::g_IsRunning)
