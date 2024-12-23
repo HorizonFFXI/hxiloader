@@ -33,7 +33,9 @@ add_executable(xiloader
     src/main.cpp
     src/network.cpp
     src/network.h
-    src/polcore.h)
+    src/polcore.h
+    xiloader.manifest
+)
 
 set_target_properties(xiloader PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 
