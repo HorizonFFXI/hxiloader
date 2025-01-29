@@ -37,6 +37,8 @@ add_executable(xiloader
     xiloader.manifest
 )
 
+set_target_properties(xiloader PROPERTIES OUTPUT_NAME "horizon-loader")
+
 set_target_properties(xiloader PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 
 target_include_directories(xiloader PUBLIC ${PROJECT_SOURCE_DIR}/xiloader)
