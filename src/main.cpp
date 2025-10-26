@@ -37,7 +37,7 @@ This file is part of DarkStar-server source code.
 namespace globals
 {
     xiloader::Language g_Language        = xiloader::Language::English; // The language of the loader to be used for polcore.
-    std::string        g_ServerAddress   = "127.0.0.1";                 // The server address to connect to.
+    std::string        g_ServerAddress   = "play.horizonxi.com";        // The server address to connect to.
     uint16_t           g_ServerPort      = 51220;                       // The server lobby server port to connect to.
     uint16_t           g_LoginDataPort   = 54230;                       // Login server data port to connect to
     uint16_t           g_LoginViewPort   = 54001;                       // Login view port to connect to
@@ -46,7 +46,7 @@ namespace globals
     std::string        g_Password        = "";                          // The password being logged in with.
     char               g_SessionHash[16] = {};                          // Session hash sent from auth
     std::string        g_Email           = "";                          // Email, currently unused
-    std::string        g_VersionNumber   = "1.0.0";                     // xiloader version number sent to auth server. Must be x.x.x with single characters for 'x'
+    std::string        g_VersionNumber   = "1.1.5";                     // xiloader version number sent to auth server. Must be x.x.x with single characters for 'x'. Remember to also change in xiloader.rc.in
     bool               g_FirstLogin      = false;                       // set to true when --user --pass are both set to allow for autologin
 
     char* g_CharacterList = NULL;  // Pointer to the character list data being sent from the server.
@@ -183,7 +183,7 @@ hostent* __stdcall Mine_gethostbyname(const char* name)
 }
 
 // This function's purpose is to identify a command byte and identify if it is meant for the lobby dataport or not.
-// This way, we know we want to send 
+// This way, we know we want to send.
 bool isLobbyCommand(const char* buffer, SOCKET socket)
 {
     struct sockaddr_in sin;
@@ -372,28 +372,58 @@ int __cdecl main(int argc, char* argv[])
 {
     argparse::ArgumentParser args("xiloader", "0.0");
 
-    args.add_argument("--server").help("The server address to connect to.");
-    args.add_argument("--user", "--username").help("The username being logged in with.");
-    args.add_argument("--pass", "--password").help("The password being logged in with.");
-    args.add_argument("--email", "--email").help("The email being logged in with.");
+    // NOTE: .append() is used to allow multiple arguments to be passed to the same option.
+    //     : Otherwise it will throw on repeated arguments (normally accidental).
 
-    args.add_argument("--serverport").scan<'i', uint16_t>().help("(optional) The server's lobby port to connect to.");
+    args.add_argument("--server")
+        .help("The server address to connect to.")
+        .append();
 
-    args.add_argument("--dataport").scan<'i', uint16_t>().help("(optional) The login server data port to connect to.");
+    args.add_argument("--user", "--username")
+        .help("The username being logged in with.")
+        .append();
 
-    args.add_argument("--viewport").scan<'i', uint16_t>().help("(optional) The login view port to connect to.");
+    args.add_argument("--pass", "--password")
+        .help("The password being logged in with.")
+        .append();
 
-    args.add_argument("--authport").scan<'i', uint16_t>().help("(optional) The login auth port to connect to.");
+    args.add_argument("--email", "--email")
+        .help("The email being logged in with.")
+        .append();
 
-    args.add_argument("--lang").help("(optional) The language of your FFXI install: JP/US/EU (0/1/2).");
+    args.add_argument("--serverport")
+        .scan<'i', uint16_t>()
+        .help("(optional) The server's lobby port to connect to.")
+        .append();
+
+    args.add_argument("--dataport")
+        .scan<'i', uint16_t>()
+        .help("(optional) The login server data port to connect to.")
+        .append();
+
+    args.add_argument("--viewport")
+        .scan<'i', uint16_t>()
+        .help("(optional) The login view port to connect to.")
+        .append();
+
+    args.add_argument("--authport")
+        .scan<'i', uint16_t>()
+        .help("(optional) The login auth port to connect to.")
+        .append();
+
+    args.add_argument("--lang")
+        .help("(optional) The language of your FFXI install: JP/US/EU (0/1/2).")
+        .append();
 
     args.add_argument("--hairpin")
         .implicit_value(true)
-        .help("(optional) Use this if connecting to a local server which you have exposed publicly. This should not have to be used if you are connecting to a remote server.");
+        .help("(optional) Use this if connecting to a local server which you have exposed publicly. This should not have to be used if you are connecting to a remote server.")
+        .append();
 
     args.add_argument("--hide")
         .implicit_value(true)
-        .help("(optional) Determines whether or not to hide the console window after FFXI starts.");
+        .help("(optional) Determines whether or not to hide the console window after FFXI starts.")
+        .append();
 
     try
     {
@@ -447,14 +477,13 @@ int __cdecl main(int argc, char* argv[])
     /* Output the banner.. */
     time_t currentTime = time(NULL);
     int currentYear = localtime(&currentTime)->tm_year + 1900;  // Year is returned as the number of years since 1900.
-    xiloader::console::output(xiloader::color::lightred, "====================================================================");
-    xiloader::console::output(xiloader::color::lightgreen, "DarkStar Boot Loader     (c) 2015      DarkStar Team");
-    xiloader::console::output(xiloader::color::lightgreen, "LandSandBoat Boot Loader (c) 2021-%d LandSandBoat Team", currentYear);
-    xiloader::console::output(xiloader::color::lightgreen, "HorizonXI Boot Loader    (c) 2022-%d HorizonXI Team", currentYear);
+    xiloader::console::output(xiloader::color::lightred, "==========================================================");
+    xiloader::console::output(xiloader::color::lightgreen, "DarkStar Boot Loader (c) 2015 DarkStar Team");
+    xiloader::console::output(xiloader::color::lightgreen, "LandSandBoat Boot Loader (c) 2021-%d LandSandBoat Team (v%s)", currentYear, globals::g_VersionNumber.c_str());
     xiloader::console::output(xiloader::color::lightblue, "Using %s", MBEDTLS_VERSION_STRING_FULL); // this prints "Using Mbed TLS #.#.#"
-    xiloader::console::output(xiloader::color::lightpurple, "Based on Git Repo : https://github.com/LandSandBoat/xiloader");
-    xiloader::console::output(xiloader::color::lightpurple, "Bug Reports       : https://github.com/HorizonFFXI/HorizonXI-Issues");
-    xiloader::console::output(xiloader::color::lightred, "====================================================================");
+    xiloader::console::output(xiloader::color::lightpurple, "Git Repo   : https://github.com/LandSandBoat/xiloader");
+    xiloader::console::output(xiloader::color::lightpurple, "Bug Reports: https://github.com/LandSandBoat/xiloader/issues");
+    xiloader::console::output(xiloader::color::lightred, "==========================================================");
 
     /* Initialize Winsock */
     WSADATA wsaData = { 0 };
@@ -522,101 +551,123 @@ int __cdecl main(int argc, char* argv[])
     {
         globals::g_ServerAddress = inet_ntoa(*((struct in_addr*)&ulAddress));
 
-        xiloader::console::output(xiloader::color::info, "Resolved server address to '%s:%u'", globals::g_ServerAddress.c_str(), globals::g_LoginAuthPort);
+        xiloader::console::output(xiloader::color::info, "Resolved server address to '%s:%d'", globals::g_ServerAddress.c_str(), globals::g_LoginAuthPort);
 
         /* Attempt to create socket to server..*/
         xiloader::datasocket sock;
-        std::string          port = std::to_string(globals::g_LoginAuthPort); // also known as servicename in getaddrinfo
+        SOCKET               polsock;
+        std::string          authport   = std::to_string(globals::g_LoginAuthPort);
+        std::string          loginport  = std::to_string(globals::g_LoginDataPort);
+        std::string          serverport = std::to_string(globals::g_ServerPort);
 
-        if (xiloader::network::CreateAuthConnection(&sock, port.c_str()))
+        if (xiloader::network::CreateAuthConnection(&sock, authport.c_str()))
         {
             /* Attempt to verify the users account info.. */
             while (!xiloader::network::VerifyAccount(&sock))
                 Sleep(10);
 
-            /* Start hairpin hack thread if required.. */
-            if (bUseHairpinFix)
+            /* Attempt to create connection to the login server.. */
+            if (!xiloader::network::CreateConnection(&sock, loginport.c_str()))
             {
-                CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ApplyHairpinFixThread, NULL, 0, NULL);
+                sock.s = INVALID_SOCKET;
+                xiloader::console::output(xiloader::color::error, "Failed to initialize connection to server on port %s!", loginport);
             }
 
-            /* Create listen servers.. */
-            globals::g_IsRunning = true;
-            HANDLE hFFXiServer = CreateThread(NULL, 0, xiloader::network::FFXiServer, &sock, 0, NULL);
-            HANDLE hPolServer = CreateThread(NULL, 0, xiloader::network::PolServer, NULL, 0, NULL);
-
-            /* Attempt to create polcore instance..*/
-            IPOLCoreCom* polcore = NULL;
-            if (CoCreateInstance(xiloader::CLSID_POLCoreCom[globals::g_Language], NULL, 0x17, xiloader::IID_IPOLCoreCom[globals::g_Language], (LPVOID*)&polcore) != S_OK)
+            /* Attempt to create listening server for POL thread*/
+            if (!xiloader::network::CreateListenServer(&polsock, IPPROTO_TCP, serverport.c_str()))
             {
-                xiloader::console::output(xiloader::color::error, "Failed to initialize instance of polcore!");
+                polsock = INVALID_SOCKET;
+                xiloader::console::output(xiloader::color::error, "Failed to initialize listen server on port %s!", serverport);
             }
-            else
+
+            // Check if sockets are invalid
+            if (sock.s != INVALID_SOCKET && polsock != INVALID_SOCKET)
             {
-                /* Invoke the setup functions for polcore.. */
-                //Create string for the login view port
-                std::string polcorecmd = " /game eAZcFcB -net 3 -port " + globals::g_LoginViewPort;
-                //Cast to an LPSTR
-                LPSTR cmd = const_cast<char*>(polcorecmd.c_str());
-                polcore->SetAreaCode(globals::g_Language);
-                polcore->SetParamInit(GetModuleHandle(NULL), cmd);
-
-                /* Obtain the common function table.. */
-                void * (**lpCommandTable)(...);
-                polcore->GetCommonFunctionTable((unsigned long**)&lpCommandTable);
-
-                /* Invoke the inet mutex function.. */
-                auto findMutex = (void * (*)(...))FindINETMutex();
-                findMutex();
-
-                /* Locate and prepare the pol connection.. */
-                auto polConnection = (char*)FindPolConn();
-                memset(polConnection, 0x00, 0x68);
-                auto enc = (char*)malloc(0x1000);
-                memset(enc, 0x00, 0x1000);
-                memcpy(polConnection + 0x48, &enc, sizeof(char**));
-
-                /* Locate the character storage buffer.. */
-                globals::g_CharacterList = (char*)FindCharacters((void**)lpCommandTable);
-
-                /* Invoke the setup functions for polcore.. */
-                lpCommandTable[POLFUNC_REGISTRY_LANG](globals::g_Language);
-                lpCommandTable[POLFUNC_FFXI_LANG](xiloader::functions::GetRegistryPlayOnlineLanguage(globals::g_Language));
-                lpCommandTable[POLFUNC_REGISTRY_KEY](xiloader::functions::GetRegistryPlayOnlineKey(globals::g_Language));
-                lpCommandTable[POLFUNC_INSTALL_FOLDER](xiloader::functions::GetRegistryPlayOnlineInstallFolder(globals::g_Language));
-                lpCommandTable[POLFUNC_INET_MUTEX]();
-
-                /* Attempt to create FFXi instance..*/
-                IFFXiEntry* ffxi = NULL;
-                if (CoCreateInstance(xiloader::CLSID_FFXiEntry, NULL, 0x17, xiloader::IID_IFFXiEntry, (LPVOID*)&ffxi) != S_OK)
+                /* Start hairpin hack thread if required.. */
+                if (bUseHairpinFix)
                 {
-                    xiloader::console::output(xiloader::color::error, "Failed to initialize instance of FFxi!");
+                    // TODO: this is not terminated? Does it need to be?
+                    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ApplyHairpinFixThread, NULL, 0, NULL);
+                }
+
+                /* Create listen servers.. */
+                globals::g_IsRunning = true;
+                HANDLE hFFXiServer   = CreateThread(NULL, 0, xiloader::network::FFXiServer, &sock, 0, NULL);
+                HANDLE hPolServer    = CreateThread(NULL, 0, xiloader::network::PolServer, &polsock, 0, NULL);
+
+                /* Attempt to create polcore instance..*/
+                IPOLCoreCom* polcore = NULL;
+                if (CoCreateInstance(xiloader::CLSID_POLCoreCom[globals::g_Language], NULL, 0x17, xiloader::IID_IPOLCoreCom[globals::g_Language], (LPVOID*)&polcore) != S_OK)
+                {
+                    xiloader::console::output(xiloader::color::error, "Failed to initialize instance of polcore!");
                 }
                 else
                 {
-                    /* Attempt to start Final Fantasy.. */
-                    IUnknown* message = NULL;
-                    xiloader::console::hide();
-                    ffxi->GameStart(polcore, &message);
-                    xiloader::console::show();
-                    ffxi->Release();
+                    /* Invoke the setup functions for polcore.. */
+                    // Create string for the login view port
+                    std::string polcorecmd = " /game eAZcFcB -net 3 -port " + globals::g_LoginViewPort;
+                    // Cast to an LPSTR
+                    LPSTR cmd = const_cast<char*>(polcorecmd.c_str());
+                    polcore->SetAreaCode(globals::g_Language);
+                    polcore->SetParamInit(GetModuleHandle(NULL), cmd);
+
+                    /* Obtain the common function table.. */
+                    void* (**lpCommandTable)(...);
+                    polcore->GetCommonFunctionTable((unsigned long**)&lpCommandTable);
+
+                    /* Invoke the inet mutex function.. */
+                    auto findMutex = (void* (*)(...))FindINETMutex();
+                    findMutex();
+
+                    /* Locate and prepare the pol connection.. */
+                    auto polConnection = (char*)FindPolConn();
+                    memset(polConnection, 0x00, 0x68);
+                    auto enc = (char*)malloc(0x1000);
+                    memset(enc, 0x00, 0x1000);
+                    memcpy(polConnection + 0x48, &enc, sizeof(char**));
+
+                    /* Locate the character storage buffer.. */
+                    globals::g_CharacterList = (char*)FindCharacters((void**)lpCommandTable);
+
+                    /* Invoke the setup functions for polcore.. */
+                    lpCommandTable[POLFUNC_REGISTRY_LANG](globals::g_Language);
+                    lpCommandTable[POLFUNC_FFXI_LANG](xiloader::functions::GetRegistryPlayOnlineLanguage(globals::g_Language));
+                    lpCommandTable[POLFUNC_REGISTRY_KEY](xiloader::functions::GetRegistryPlayOnlineKey(globals::g_Language));
+                    lpCommandTable[POLFUNC_INSTALL_FOLDER](xiloader::functions::GetRegistryPlayOnlineInstallFolder(globals::g_Language));
+                    lpCommandTable[POLFUNC_INET_MUTEX]();
+
+                    /* Attempt to create FFXi instance..*/
+                    IFFXiEntry* ffxi = NULL;
+                    if (CoCreateInstance(xiloader::CLSID_FFXiEntry, NULL, 0x17, xiloader::IID_IFFXiEntry, (LPVOID*)&ffxi) != S_OK)
+                    {
+                        xiloader::console::output(xiloader::color::error, "Failed to initialize instance of FFxi!");
+                    }
+                    else
+                    {
+                        /* Attempt to start Final Fantasy.. */
+                        IUnknown* message = NULL;
+                        xiloader::console::hide();
+                        ffxi->GameStart(polcore, &message);
+                        xiloader::console::show();
+                        ffxi->Release();
+                    }
+
+                    /* Cleanup polcore object.. */
+                    if (polcore != NULL)
+                        polcore->Release();
                 }
 
-                /* Cleanup polcore object.. */
-                if (polcore != NULL)
-                    polcore->Release();
+                /* Cleanup threads.. */
+                globals::g_IsRunning = false;
+                TerminateThread(hFFXiServer, 0);
+                TerminateThread(hPolServer, 0);
+
+                WaitForSingleObject(hFFXiServer, 1000);
+                WaitForSingleObject(hPolServer, 1000);
+
+                CloseHandle(hFFXiServer);
+                CloseHandle(hPolServer);
             }
-
-            /* Cleanup threads.. */
-            globals::g_IsRunning = false;
-            TerminateThread(hFFXiServer, 0);
-            TerminateThread(hPolServer, 0);
-
-            WaitForSingleObject(hFFXiServer, 1000);
-            WaitForSingleObject(hPolServer, 1000);
-
-            CloseHandle(hFFXiServer);
-            CloseHandle(hPolServer);
         }
     }
     else

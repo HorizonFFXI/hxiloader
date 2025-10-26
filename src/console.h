@@ -90,7 +90,7 @@ namespace xiloader
          */
         static void visible(bool visible);
 
-        public:
+    public:
 
         /**
          * @brief Prints a text fragment with the specified color to the console.
@@ -127,7 +127,6 @@ namespace xiloader
 
             return timestamp;
         }
-
         /**
          * @brief Prints the given message to the console with the specific color.
          *

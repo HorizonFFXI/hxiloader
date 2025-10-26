@@ -59,96 +59,6 @@ namespace sslState
 
 namespace xiloader
 {
-
-    /**
-     * @brief Finds the MAC address of the primary network adapter
-     * @return MAC address buffer
-     */
-    std::string GetMacAddress()
-    {
-        // Allocate space for at least one adapter..
-        auto info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
-        ULONG size = 0;
-
-        struct addrinfo hints;
-        memset(&hints, 0x00, sizeof(hints));
-
-        hints.ai_family   = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-
-        /* Attempt to resolve the local address.. */
-        struct addrinfo* addr = NULL;
-        std::string      port = std::to_string(globals::g_LoginDataPort); // also known as servicename in getaddrinfo
-
-        if (getaddrinfo(NULL, port.c_str(), &hints, &addr))
-        {
-            xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
-        }
-
-        std::string localAddress = "";
-
-        /* Attempt to locate the client address.. */
-        char hostname[1024] = { 0 };
-        if (gethostname(hostname, sizeof(hostname)) == 0)
-        {
-            PHOSTENT hostent = NULL;
-            if ((hostent = gethostbyname(hostname)) != NULL)
-                localAddress = inet_ntoa(*(struct in_addr*)*hostent->h_addr_list);
-        }
-
-        // Obtain the adapter info, if fails, resize the buffer..
-        if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
-        {
-            delete[] info;
-            info = (IP_ADAPTER_INFO*)new uint8_t[size];
-        }
-
-        // Reobtain the adapter info..
-        if (::GetAdaptersInfo(info, &size) != ERROR_SUCCESS)
-        {
-            delete[] info;
-            return "";
-        }
-
-        // Walk the adapters..
-        std::string adapterAddress;
-        auto adapter = info;
-        while (adapter)
-        {
-            if (!strcmp(adapter->IpAddressList.IpAddress.String, localAddress.c_str()))
-            {
-                // Build the adapter address..
-                for (size_t x = 0; x < adapter->AddressLength; x++)
-                {
-                    // Build the address from the adapter info..
-                    char buffer[256] = { 0 };
-                    std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
-                    adapterAddress += buffer;
-
-                    // Append colons between address parts..
-                    if (x < adapter->AddressLength - 1)
-                        adapterAddress += ":";
-                }
-                break;
-            }
-
-            // Step to the next adapter..
-            adapter = adapter->Next;
-        }
-
-        // If no adapter address matches, then use a null address
-        if (!adapterAddress.size())
-        {
-            adapterAddress = "00:00:00:00:00:00";
-        }
-
-        // Cleanup and return..
-        delete[] info;
-
-        return adapterAddress;
-    }
-
     /**
      * @brief Creates a connection on the given port.
      *
@@ -252,11 +162,9 @@ namespace xiloader
             return 0;
         }
 
-        ret = mbedtls_ssl_config_defaults(&sslState::conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
-        if (ret != 0)
+        if ((ret = mbedtls_ssl_config_defaults(&sslState::conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
         {
             xiloader::console::output(xiloader::color::error, "mbedtls_ssl_config_defaults failed, (%s)", mbedtls_low_level_strerr(ret));
-            ;
             return 0;
         }
 
@@ -420,6 +328,96 @@ namespace xiloader
     }
 
     /**
+     * @brief Finds the MAC address of the primary network adapter
+     *
+     * @return MAC address buffer
+     */
+    std::string network::GetMacAddress()
+    {
+        // Allocate space for at least one adapter..
+        auto  info = (IP_ADAPTER_INFO*)new uint8_t[sizeof(IP_ADAPTER_INFO)];
+        ULONG size = 0;
+
+        struct addrinfo hints;
+        memset(&hints, 0x00, sizeof(hints));
+
+        hints.ai_family   = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        /* Attempt to resolve the local address.. */
+        struct addrinfo* addr = NULL;
+        std::string      port = std::to_string(globals::g_LoginDataPort); // also known as servicename in getaddrinfo
+
+        if (getaddrinfo(NULL, port.c_str(), &hints, &addr))
+        {
+            xiloader::console::output(xiloader::color::error, "Failed to obtain local address information.");
+        }
+
+        std::string localAddress = "";
+
+        /* Attempt to locate the client address.. */
+        char hostname[1024] = { 0 };
+        if (gethostname(hostname, sizeof(hostname)) == 0)
+        {
+            PHOSTENT hostent = NULL;
+            if ((hostent = gethostbyname(hostname)) != NULL)
+                localAddress = inet_ntoa(*(struct in_addr*)*hostent->h_addr_list);
+        }
+
+        // Obtain the adapter info, if fails, resize the buffer..
+        if (::GetAdaptersInfo(info, &size) == ERROR_BUFFER_OVERFLOW)
+        {
+            delete[] info;
+            info = (IP_ADAPTER_INFO*)new uint8_t[size];
+        }
+
+        // Reobtain the adapter info..
+        if (::GetAdaptersInfo(info, &size) != ERROR_SUCCESS)
+        {
+            delete[] info;
+            return "";
+        }
+
+        // Walk the adapters..
+        std::string adapterAddress;
+        auto        adapter = info;
+        while (adapter)
+        {
+            if (!strcmp(adapter->IpAddressList.IpAddress.String, localAddress.c_str()))
+            {
+                // Build the adapter address..
+                for (size_t x = 0; x < adapter->AddressLength; x++)
+                {
+                    // Build the address from the adapter info..
+                    char buffer[256] = { 0 };
+                    std::snprintf(buffer, 256, "%02x", adapter->Address[x]);
+                    adapterAddress += buffer;
+
+                    // Append colons between address parts..
+                    if (x < adapter->AddressLength - 1)
+                        adapterAddress += ":";
+                }
+                break;
+            }
+
+            // Step to the next adapter..
+            adapter = adapter->Next;
+        }
+
+        // If no adapter address matches, then use a null address
+        if (!adapterAddress.size())
+        {
+            adapterAddress = "00:00:00:00:00:00";
+        }
+
+        // Cleanup and return..
+        delete[] info;
+
+        return adapterAddress;
+    }
+
+    /**
      * @brief Verifies the players login information; also handles creating new accounts.
      *
      * @param sock      The datasocket object with the connection socket.
@@ -570,6 +568,7 @@ namespace xiloader
         memcpy(sendBuffer + 0x40, new_password.c_str(), 32);
 
         // 17 byte wide operator specific space starting at 0x50 // This region will be used for anything server operators may install into custom launchers.
+        // HXI - 0x50 - 0x61 = 17 bytes [ MAC Address Logging ]
         memcpy(sendBuffer + 0x50, GetMacAddress().c_str(), 17);
 
         /* Copy version number into buffer */
@@ -848,12 +847,6 @@ namespace xiloader
      */
     DWORD __stdcall network::FFXiServer(LPVOID lpParam)
     {
-        std::string port = std::to_string(globals::g_LoginDataPort); // also known as service in getaddrinfo
-
-        /* Attempt to create connection to the server.. */
-        if (!xiloader::network::CreateConnection((xiloader::datasocket*)lpParam, port.c_str()))
-            return 1;
-
         /* Attempt to start data communication with the server.. */
         CreateThread(NULL, 0, xiloader::network::FFXiDataComm, lpParam, 0, NULL);
         Sleep(200);
@@ -872,13 +865,8 @@ namespace xiloader
     {
         UNREFERENCED_PARAMETER(lpParam);
 
-        SOCKET      sock;
-        SOCKET      client;
-        std::string port = std::to_string(globals::g_ServerPort); // also known as servicename in getaddrinfo
-
-        /* Attempt to create listening server.. */
-        if (!xiloader::network::CreateListenServer(&sock, IPPROTO_TCP, port.c_str()))
-            return 1;
+        SOCKET sock = *reinterpret_cast<SOCKET*>(lpParam);
+        SOCKET client;
 
         while (globals::g_IsRunning)
         {

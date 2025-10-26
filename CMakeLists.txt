@@ -21,6 +21,11 @@ include(cmake/detours.cmake)
 include(cmake/argparse.cmake)
 include(cmake/mbedtls.cmake)
 
+configure_file(
+	src/xiloader.rc.in
+	src/xiloader.rc
+)
+
 # xiloader
 add_executable(xiloader
     src/console.cpp
@@ -34,8 +39,11 @@ add_executable(xiloader
     src/network.cpp
     src/network.h
     src/polcore.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/xiloader.rc
     xiloader.manifest
 )
+
+set_target_properties(xiloader PROPERTIES OUTPUT_NAME "horizon-loader")
 
 set_target_properties(xiloader PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 
