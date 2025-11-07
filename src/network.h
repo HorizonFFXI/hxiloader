@@ -84,7 +84,7 @@ namespace xiloader
          * @return Non-important return.
          */
         static DWORD __stdcall PolDataComm(LPVOID lpParam);
-        
+
     public:
 
         /**
@@ -118,7 +118,7 @@ namespace xiloader
          * @return True on success, false otherwise.
          */
         static bool CreateListenServer(SOCKET* sock, int protocol, const char* port);
-        
+
         /**
          * @brief Resolves the given hostname to its long ip format.
          *
@@ -144,7 +144,7 @@ namespace xiloader
          * @return True on success, false otherwise.
          */
         static bool VerifyAccount(datasocket* sock);
-        
+
         /**
          * @brief Starts the data communication between the client and server.
          *

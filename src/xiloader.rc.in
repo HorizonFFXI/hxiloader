@@ -1,11 +1,15 @@
+// Remember to update both when you change file versions:
+// FILEVERSION ...
+// VALUE "FileVersion", ...
+
 1 VERSIONINFO
-FILEVERSION 1,1,1
+FILEVERSION 2,0,0
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "081604b0"
+        BLOCK "040904B0"
         BEGIN
-            VALUE "FileVersion", "1.1.4"
+            VALUE "FileVersion", "2.0.0"
         END
     END
 END
