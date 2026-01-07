@@ -84,7 +84,7 @@ namespace xiloader
          * @return Non-important return.
          */
         static DWORD __stdcall PolDataComm(LPVOID lpParam);
-        
+
     public:
 
         /**
@@ -118,7 +118,7 @@ namespace xiloader
          * @return True on success, false otherwise.
          */
         static bool CreateListenServer(SOCKET* sock, int protocol, const char* port);
-        
+
         /**
          * @brief Resolves the given hostname to its long ip format.
          *
@@ -130,6 +130,13 @@ namespace xiloader
         static bool ResolveHostname(const char* host, PULONG lpOutput);
 
         /**
+         * @brief Resolves the MAC address used by the network adapter on the socket.
+         *
+         * @return The MAC address of the network adapter.
+         */
+        static std::string GetMacAddress();
+
+        /**
          * @brief Verifies the players login information; also handles creating new accounts.
          *
          * @param sock          The datasocket object with the connection socket.
@@ -137,7 +144,7 @@ namespace xiloader
          * @return True on success, false otherwise.
          */
         static bool VerifyAccount(datasocket* sock);
-        
+
         /**
          * @brief Starts the data communication between the client and server.
          *
